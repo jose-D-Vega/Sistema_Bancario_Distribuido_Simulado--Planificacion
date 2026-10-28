@@ -1,0 +1,396 @@
+openapi: 3.0.3
+info:
+  title: API de Interoperabilidad Bancaria — BCP Simulado (v2 simplificada)
+  version: 2.1.0
+  description: >
+    Contrato técnico mínimo que cada banco debe implementar para que las
+    transferencias interbancarias y los retiros por cajero funcionen entre
+    los 4 grupos. Ver 02_contrato_interoperabilidad_v2.md y
+    03_especificacion_atm_v2.md para el detalle de reglas de negocio.
+    Cada grupo implementa estos endpoints con la tecnología que elija;
+    lo único obligatorio es que respondan exactamente con esta forma.
+    La autenticación entre bancos es por firma digital Ed25519
+    (headers X-Bank-Id, X-Timestamp, X-Signature); no se usa clave de
+    API compartida. Ver documento 02, sección 1, para el detalle de cómo
+    se arma y verifica la firma.
+
+servers:
+  - url: http://localhost:8080
+    description: Reemplazar por la URL real de cada banco en la demo
+
+paths:
+  /interbancario/creditos:
+    post:
+      summary: Solicita a este banco que acredite una transferencia entrante
+      operationId: crearCreditoInterbancario
+      parameters:
+        - $ref: '#/components/parameters/BankId'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolicitudCredito'
+      responses:
+        '200':
+          description: Crédito procesado (aceptado o rechazado; ver campo estado)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Credito'
+        '400':
+          $ref: '#/components/responses/SolicitudInvalida'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '409':
+          $ref: '#/components/responses/ConflictoIdempotencia'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /interbancario/creditos/{transfer_id}:
+    get:
+      summary: Consulta el estado de un crédito interbancario ya solicitado
+      operationId: consultarCreditoInterbancario
+      parameters:
+        - $ref: '#/components/parameters/TransferId'
+        - $ref: '#/components/parameters/BankId'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: Estado actual del crédito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Credito'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /cuentas/{numero_cuenta}:
+    get:
+      summary: Consulta datos básicos de una cuenta propia del banco
+      operationId: consultarCuenta
+      parameters:
+        - name: numero_cuenta
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/BankId'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: Datos básicos de la cuenta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cuenta'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '404':
+          description: La cuenta no existe en este banco
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /cajero/autorizaciones:
+    post:
+      summary: Autoriza y debita, en una sola operación, un retiro de cajero
+      operationId: crearAutorizacionCajero
+      parameters:
+        - $ref: '#/components/parameters/BankId'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolicitudAutorizacionCajero'
+      responses:
+        '200':
+          description: Autorización procesada (aceptada o rechazada; ver campo estado)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutorizacionCajero'
+        '400':
+          $ref: '#/components/responses/SolicitudInvalida'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '409':
+          $ref: '#/components/responses/ConflictoIdempotencia'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /cajero/autorizaciones/{operacion_id}:
+    get:
+      summary: Consulta el estado de una autorización de cajero ya solicitada
+      operationId: consultarAutorizacionCajero
+      parameters:
+        - name: operacion_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/BankId'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: Estado actual de la autorización
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutorizacionCajero'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+components:
+  parameters:
+    BankId:
+      name: X-Bank-Id
+      in: header
+      required: true
+      description: banco_id de quien realiza la llamada (acordado en el documento 01)
+      schema:
+        type: string
+        example: BCO1
+    Timestamp:
+      name: X-Timestamp
+      in: header
+      required: true
+      description: >
+        Fecha/hora UTC de la solicitud, formato ISO 8601. El receptor
+        rechaza la solicitud si difiere más de 5 minutos de su propio
+        reloj (ver TIMESTAMP_FUERA_DE_RANGO).
+      schema:
+        type: string
+        format: date-time
+        example: '2026-10-26T14:32:10Z'
+    IdempotencyKey:
+      name: X-Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Signature:
+      name: X-Signature
+      in: header
+      required: true
+      description: >
+        Firma Ed25519 en base64 de la cadena canónica de la solicitud
+        (método, ruta, X-Bank-Id, X-Idempotency-Key, X-Timestamp y
+        cuerpo), calculada con la clave privada de quien llama. Ver
+        documento 02, sección 1, para el detalle exacto del cálculo.
+      schema:
+        type: string
+    TransferId:
+      name: transfer_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    SolicitudInvalida:
+      description: Falta un campo requerido o el formato es incorrecto
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NoAutorizado:
+      description: >
+        La firma no verifica contra la clave pública del banco_id
+        declarado (FIRMA_INVALIDA), el banco_id no está en el registro
+        (BANCO_NO_RECONOCIDO), o X-Timestamp está fuera de rango
+        (TIMESTAMP_FUERA_DE_RANGO). Ver el campo "error" de la respuesta
+        para distinguir el motivo.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NoEncontrado:
+      description: El identificador consultado no existe
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ConflictoIdempotencia:
+      description: La clave de idempotencia ya se usó con datos distintos
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ErrorInterno:
+      description: Error no controlado del banco que responde
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      required: [error, mensaje]
+      properties:
+        error:
+          type: string
+          description: Código del catálogo de errores (ver documento 02)
+          enum:
+            - CUENTA_NO_EXISTE
+            - CUENTA_INACTIVA
+            - FONDOS_INSUFICIENTES
+            - LIMITE_EXCEDIDO
+            - BANCO_NO_RECONOCIDO
+            - SOLICITUD_INVALIDA
+            - FIRMA_INVALIDA
+            - TIMESTAMP_FUERA_DE_RANGO
+            - CONFLICTO_IDEMPOTENCIA
+            - NO_ENCONTRADO
+            - ERROR_INTERNO
+          example: FONDOS_INSUFICIENTES
+        mensaje:
+          type: string
+          example: El saldo disponible no alcanza para esta operación
+
+    EstadoCredito:
+      type: string
+      enum: [ACREDITADO, RECHAZADO, PENDIENTE]
+
+    SolicitudCredito:
+      type: object
+      required:
+        - transfer_id
+        - cuenta_destino
+        - banco_origen
+        - cuenta_origen
+        - importe
+        - moneda
+      properties:
+        transfer_id:
+          type: string
+          format: uuid
+        cuenta_destino:
+          type: string
+          description: Número de cuenta en este banco (el que recibe el crédito)
+        banco_origen:
+          type: string
+          example: BCO1
+        cuenta_origen:
+          type: string
+        importe:
+          type: integer
+          minimum: 1
+          description: Importe entero en guaraníes
+        moneda:
+          type: string
+          enum: [PYG]
+        concepto:
+          type: string
+          nullable: true
+
+    Credito:
+      type: object
+      required: [transfer_id, estado]
+      properties:
+        transfer_id:
+          type: string
+          format: uuid
+        estado:
+          $ref: '#/components/schemas/EstadoCredito'
+        motivo_rechazo:
+          type: string
+          nullable: true
+          description: Código de error si estado es RECHAZADO
+        fecha_hora:
+          type: string
+          format: date-time
+
+    Cuenta:
+      type: object
+      required: [banco_id, numero_cuenta, estado]
+      properties:
+        banco_id:
+          type: string
+        numero_cuenta:
+          type: string
+        estado:
+          type: string
+          enum: [ACTIVA, BLOQUEADA, CERRADA]
+        titular:
+          type: string
+          nullable: true
+          description: Opcional; solo si el banco quiere exponerlo
+
+    EstadoAutorizacion:
+      type: string
+      enum: [AUTORIZADO, RECHAZADO, PENDIENTE]
+
+    SolicitudAutorizacionCajero:
+      type: object
+      required:
+        - operacion_id
+        - banco_cuenta
+        - numero_cuenta
+        - pin
+        - importe
+        - moneda
+      properties:
+        operacion_id:
+          type: string
+          format: uuid
+        banco_cuenta:
+          type: string
+          description: banco_id de la cuenta que retira (puede ser distinto al banco dueño del cajero)
+          example: BCO2
+        numero_cuenta:
+          type: string
+        pin:
+          type: string
+          description: Nunca debe registrarse en logs ni en auditoría
+        importe:
+          type: integer
+          minimum: 1
+          maximum: 1500000
+        moneda:
+          type: string
+          enum: [PYG]
+
+    AutorizacionCajero:
+      type: object
+      required: [operacion_id, estado]
+      properties:
+        operacion_id:
+          type: string
+          format: uuid
+        estado:
+          $ref: '#/components/schemas/EstadoAutorizacion'
+        motivo_rechazo:
+          type: string
+          nullable: true
+        fecha_hora:
+          type: string
+          format: date-time
