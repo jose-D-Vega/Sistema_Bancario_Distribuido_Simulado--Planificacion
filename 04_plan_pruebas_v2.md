@@ -55,7 +55,8 @@ reglamento (documento 01) y el contrato técnico (documento 02).
 
 15. Retiro exitoso desde el cajero de un banco, sobre una cuenta de otro
     banco.
-16. Retiro rechazado por PIN incorrecto.
+16. Retiro rechazado por PIN incorrecto (respuesta con `motivo_rechazo:
+    PIN_INCORRECTO`).
 17. Retiro rechazado por importe mayor al límite de retiro
     (G. 1.500.000).
 18. Retiro rechazado por límite diario combinado ya alcanzado (por

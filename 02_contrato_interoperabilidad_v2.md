@@ -288,6 +288,7 @@ Toda respuesta de error debe tener este formato:
 |---|---|---|
 | `CUENTA_NO_EXISTE` | 404 | La cuenta indicada no existe en este banco |
 | `CUENTA_INACTIVA` | 409 | La cuenta está bloqueada o cerrada |
+| `PIN_INCORRECTO` | 403 | El PIN enviado no coincide con el de la cuenta (solo aplica a operaciones de cajero, ver documento 03) |
 | `FONDOS_INSUFICIENTES` | 409 | El saldo disponible no alcanza |
 | `LIMITE_EXCEDIDO` | 409 | Se supera el límite por operación o el diario |
 | `BANCO_NO_RECONOCIDO` | 400 | El `banco_id` de origen no está en el registro de los 4 bancos |

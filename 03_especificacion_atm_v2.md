@@ -36,7 +36,8 @@ X-Signature: <firma calculada con la clave privada del banco dueño del cajero, 
 
 3. El banco emisor valida, en este orden:
    - Que la cuenta exista y pertenezca a ese banco.
-   - Que el PIN sea correcto.
+   - Que el PIN sea correcto (si no lo es, responde `RECHAZADO` con
+     `PIN_INCORRECTO`, ver documento 02, sección 6).
    - Que la cuenta esté activa.
    - Que el importe no supere el límite por retiro (G. 1.500.000).
    - Que no se supere el límite diario combinado de la cuenta
@@ -76,6 +77,10 @@ identifica al usuario frente a su banco emisor.
 
 ## 4. PIN incorrecto
 
+- Cada intento fallido se responde con `motivo_rechazo: PIN_INCORRECTO`
+  (documento 02, sección 6). El cajero puede mostrarle al usuario que el
+  PIN es incorrecto y permitir un nuevo intento, hasta el límite de la
+  siguiente regla.
 - Se simula un máximo de 3 intentos consecutivos de PIN incorrecto por
   operación de cajero (no es necesario implementar bloqueo persistente de
   tarjeta entre sesiones, salvo que un grupo quiera sumarlo como mejora).

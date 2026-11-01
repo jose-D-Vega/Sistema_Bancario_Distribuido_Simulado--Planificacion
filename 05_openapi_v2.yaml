@@ -262,6 +262,7 @@ components:
           enum:
             - CUENTA_NO_EXISTE
             - CUENTA_INACTIVA
+            - PIN_INCORRECTO
             - FONDOS_INSUFICIENTES
             - LIMITE_EXCEDIDO
             - BANCO_NO_RECONOCIDO
