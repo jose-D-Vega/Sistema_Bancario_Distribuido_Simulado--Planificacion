@@ -49,6 +49,9 @@ reglas de negocio, y cómo manejar los casos en que algo falla o tarda.
    de los endpoints que define el documento 02. Se puede importar
    directamente en Swagger, Postman o Insomnia para generar la base de
    la API sin transcribir el contrato a mano.
+6. **`06_registro_bancos_v2.json`** — El registro con el `banco_id`, URL
+   base y clave pública de cada uno de los 4 bancos. Lo distribuye y
+   mantiene actualizado el BCP simulado (ver documento 02, sección 1).
 
 ## Cómo usar estos documentos
 

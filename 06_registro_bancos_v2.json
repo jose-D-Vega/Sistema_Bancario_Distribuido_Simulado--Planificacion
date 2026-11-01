@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "fecha_actualizacion": "2026-10-28",
+  "algoritmo_firma": "Ed25519",
+  "formato_clave_publica": "base64 de los 32 bytes crudos de la clave pública (sin cabecera PEM, sin saltos de línea)",
+  "bancos": [
+    {
+      "banco_id": "BCO1",
+      "nombre": "<nombre del grupo / banco 1>",
+      "url_base": "<URL base de la API, ej. http://192.168.0.10:8080>",
+      "clave_publica": "<clave pública en base64>"
+    },
+    {
+      "banco_id": "BCO2",
+      "nombre": "<nombre del grupo / banco 2>",
+      "url_base": "<URL base de la API>",
+      "clave_publica": "<clave pública en base64>"
+    },
+    {
+      "banco_id": "BCO3",
+      "nombre": "<nombre del grupo / banco 3>",
+      "url_base": "<URL base de la API>",
+      "clave_publica": "<clave pública en base64>"
+    },
+    {
+      "banco_id": "BCO4",
+      "nombre": "<nombre del grupo / banco 4>",
+      "url_base": "<URL base de la API>",
+      "clave_publica": "<clave pública en base64>"
+    }
+  ]
+}

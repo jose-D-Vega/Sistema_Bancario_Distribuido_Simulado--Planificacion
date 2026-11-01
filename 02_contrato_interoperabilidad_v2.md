@@ -29,6 +29,20 @@ openssl genpkey -algorithm Ed25519 -out privada.pem
 openssl pkey -in privada.pem -pubout -out publica.pem
 ```
 
+- **Formato obligatorio de la clave pública entregada al BCP simulado:**
+  base64 de los 32 bytes crudos de la clave pública Ed25519, sin
+  cabecera PEM (`-----BEGIN PUBLIC KEY-----`) ni saltos de línea. Esto
+  es necesario porque distintas librerías exportan la clave en formatos
+  distintos por defecto (PEM, DER, hex, base64 de bytes crudos); fijar
+  un único formato evita que un banco no pueda leer la clave de otro
+  aunque ambos usen Ed25519 correctamente. La mayoría de los lenguajes
+  pueden extraer los 32 bytes crudos de un archivo PEM con una función
+  estándar de su librería de criptografía (por ejemplo, el método para
+  exportar la clave en formato "raw" en vez de "PEM"/"DER").
+- El BCP simulado centraliza las 4 claves públicas, en este formato, en
+  un único archivo de registro (`06_registro_bancos_v2.json`) que
+  distribuye a los 4 bancos. Ese archivo también define el `banco_id` y
+  la URL base de cada banco.
 - Toda solicitud entre bancos debe incluir estos headers:
 
 ```
